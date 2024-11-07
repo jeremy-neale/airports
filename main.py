@@ -5,7 +5,7 @@ import datetime
 import seaborn as sns
 import operator
 import numpy as np
-# import geopandas as gp
+import geopandas as gp
 from utils import airtraffic_helpers
 import networkx as nx
 # import community
@@ -13,12 +13,12 @@ import random
 from shapely.geometry import Point
 
 # Dometics airport details
-airports_df = pd.read_csv("{}/dataset/288804893_T_MASTER_CORD.csv".format(dir_path))
+airports_df = pd.read_csv("dataset/288804893_T_MASTER_CORD.csv")
 print('Shape of the dataframe:',airports_df.shape,'\n')
 print('Printing one record:',airports_df[:1].T)
 
 # Dometics airlines connections
-trips_df = pd.read_csv("{}/dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv".format(dir_path))
+trips_df = pd.read_csv("dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv")
 print('Shape of the dataframe:',trips_df.shape,'\n')
 print('Printing one record:',trips_df[:1].T)
 
