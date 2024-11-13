@@ -41,4 +41,6 @@ airport_ids = list(G.nodes)
 edgelist = list(G.edges)
 geo_stations = airtraffic_helpers.get_geodataframe_airports(airports_df,airport_ids)
 
-airtraffic_helpers.plot_network(G,title="",edgealpha=0.08,node_dist=1,nodesize=20,savefig=False,figsize=(15,15))
+# find network density
+print('Network density:',nx.density(G))
+#print('Undirected network density: ,' nx.density(G_undirected)
