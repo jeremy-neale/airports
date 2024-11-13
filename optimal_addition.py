@@ -90,3 +90,6 @@ candidate_csv = "candidate_cities.csv"
 # Median out-degree (outgoing flights per airport): 4.0
 # Average total degree (total connections per airport): 30.782997762863534
 # Median total degree (total connections per airport): 8.0
+
+# Average flight distance: 1244.53 km
+# Median flight distance: 984.33 km
