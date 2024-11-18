@@ -16,36 +16,35 @@ import os
 
 dir_path = os.getcwd()
 print(dir_path)
+os.chdir("/Users/akhilkamalesh/Documents/Virginia Tech/Semester 9/CS 5834/airports")
+dir_path = os.getcwd()
+print(dir_path)
 
 # Dometics airport details
 airports_df = pd.read_csv("{}/dataset/288804893_T_MASTER_CORD.csv".format(dir_path))
-print('Printing one record:',airports_df[:1].T)
-
-
 airports_df = airports_df.drop_duplicates(subset='AIRPORT_ID', keep='first')
-
 airports_df = airports_df.set_index('AIRPORT_ID')
-
 print('Shape of the airports dataframe:', airports_df.shape)
-
 print(airports_df.loc[10508].to_frame().T, '\n')
 
 
 # Dometics airlines connections
 trips_df = pd.read_csv("{}/dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv".format(dir_path))
 print('Shape of the dataframe:',trips_df.shape,'\n')
-print('Printing one record:',trips_df[:1].T)
+print('Printing trips record:',trips_df[:1].T)
 
 cities_df = pd.read_csv("{}/dataset/uscities.csv".format(dir_path))
 print('Shape of the dataframe:',cities_df.shape,'\n')
-print('Printing one record:',cities_df[:1].T, '\n')
+print('Printing cities record:',cities_df[:1].T, '\n')
 
 
-# filtered_cities = cities_df[cities_df['population'] >= 1000000]
+airports_df = test_functions.determine_airport_size(airports_df, trips_df)
 
-# print(filtered_cities)
+airports_df = airports_df.loc[airports_df['num_connections'] > 0]
 
-# print(test_functions.rank_cities_for_new_airports(cities_df, airports_df, 1000000, 100))
+filtered_cities = cities_df[cities_df['population'] >= 100000]
+
+print(test_functions.rank_cities_for_new_airports(cities_df, airports_df, 1000000, 100))
 
 
 # Extracting edges - we consider a connection from one airport to another as an edge.
