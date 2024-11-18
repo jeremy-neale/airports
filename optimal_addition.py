@@ -7,6 +7,7 @@ import operator
 import numpy as np
 import geopandas as gp
 from utils import airtraffic_helpers
+from geopy.distance import geodesic
 import networkx as nx
 # import community
 import random
@@ -27,53 +28,136 @@ def load_airports_and_edges():
     
     return G, airports_df
 
-# Helper function to get centrality score for a candidate city
-def get_score(city_data, G):
+
+
+def haversine_distance(coord1, coord2):
+    if pd.isna(coord1[0]) or pd.isna(coord1[1]) or pd.isna(coord2[0]) or pd.isna(coord2[1]):
+        raise ValueError("Coordinates must not contain NaN values.")
+    return geodesic(coord1, coord2).km
+
+
+def get_score(city_data, G, airports_df):
+    """
+    Calculate centrality measures for a candidate city.
+    Integrate the city realistically by connecting it to nearby high-degree airports.
+    
+    Parameters:
+        city_data (pd.Series): Row containing candidate city data.
+        G (nx.DiGraph): Original directed graph.
+        airports_df (pd.DataFrame): DataFrame containing airport coordinates.
+        
+    Returns:
+        dict: Centrality measures for the candidate city.
+    """
+    # Extract candidate coordinates
+    candidate_coord = (city_data['LATITUDE'], city_data['LONGITUDE'])
+    candidate_airport = city_data['AIRPORT_ID']
+    
+    # Skip candidate if coordinates are missing
+    if pd.isna(candidate_coord[0]) or pd.isna(candidate_coord[1]):
+        return {
+            "city_id": candidate_airport,
+            "in_degree_centrality": None,
+            "out_degree_centrality": None,
+            "betweenness_centrality": None,
+        }
+
+    # Find airports within 2000 km
+    airports_within_2000km = airports_df[
+        airports_df.apply(
+            lambda x: haversine_distance(candidate_coord, (x['LATITUDE'], x['LONGITUDE'])) <= 2000
+            if pd.notna(x['LATITUDE']) and pd.notna(x['LONGITUDE']) else False,
+            axis=1
+        )
+    ]
+
+    # Get top 4 airports by degree centrality within 2000 km
+    degree_centrality = nx.degree_centrality(G)
+    # Create a copy of the filtered DataFrame to avoid SettingWithCopyWarning
+    airports_within_2000km = airports_df.loc[
+        airports_df.apply(
+            lambda x: haversine_distance(candidate_coord, (x['LATITUDE'], x['LONGITUDE'])) <= 2000
+            if pd.notna(x['LATITUDE']) and pd.notna(x['LONGITUDE']) else False,
+            axis=1
+        )
+    ].copy()  # Explicitly make a copy
+
+    # Add a new column for centrality
+    airports_within_2000km['centrality'] = airports_within_2000km['AIRPORT_ID'].map(degree_centrality)
+
+    top_airports = airports_within_2000km.nlargest(4, 'centrality')['AIRPORT_ID']
+
     # Create a temporary graph to add the new city
     temp_G = G.copy()
-    
-    # Add the new city as a node, along with its potential connections
-    # Here, example connections are added from city_data['ORIGIN_AIRPORT_ID'] to other cities
-    temp_G.add_node(city_data['AIRPORT_ID'])
-    
-    # Example: connect to high centrality nodes (customize as needed)
-    # temp_G.add_edge(city_data['AIRPORT_ID'], high_centrality_airport) # Add relevant edges
-    
+    temp_G.add_node(candidate_airport)
+
+    # Add connections to the top airports
+    for airport_id in top_airports:
+        temp_G.add_edge(candidate_airport, airport_id)
+        temp_G.add_edge(airport_id, candidate_airport)
+
     # Calculate centrality measures
     in_degree_centrality = nx.in_degree_centrality(temp_G)
     out_degree_centrality = nx.out_degree_centrality(temp_G)
     betweenness_centrality = nx.betweenness_centrality(temp_G)
-    
+
     # Get scores for the new city
     scores = {
-        "city_id": city_data['AIRPORT_ID'],
-        "in_degree_centrality": in_degree_centrality[city_data['AIRPORT_ID']],
-        "out_degree_centrality": out_degree_centrality[city_data['AIRPORT_ID']],
-        "betweenness_centrality": betweenness_centrality[city_data['AIRPORT_ID']],
+        "city_id": candidate_airport,
+        "in_degree_centrality": in_degree_centrality.get(candidate_airport, 0),
+        "out_degree_centrality": out_degree_centrality.get(candidate_airport, 0),
+        "betweenness_centrality": betweenness_centrality.get(candidate_airport, 0),
     }
-    
+
     return scores
 
-# Main function to get scores for all candidate cities
-def get_all_city_scores(candidate_csv, G):
-    candidate_df = pd.read_csv(candidate_csv)
-    all_scores = []
+
+
+def calculate_centrality_for_candidates(candidate_csv, G, airports_df):
+    """
+    Calculate centrality measures for candidate cities in a CSV file.
     
-    for _, city_data in candidate_df.iterrows():
-        # Get centrality scores for each city independently
-        city_score = get_score(city_data, G)
-        all_scores.append(city_score)
+    Parameters:
+        candidate_csv (str): Path to the CSV file containing candidate city data.
+        G (nx.DiGraph): Original directed graph representing the airport network.
     
-    return all_scores
+    Returns:
+        pd.DataFrame: DataFrame containing the centrality measures for each candidate city.
+    """
+    # Load candidate city data
+    candidates_df = pd.read_csv(candidate_csv)
+    
+    # List to store centrality scores for each candidate city
+    all_city_scores = []
+    
+    for _, city_data in candidates_df.iterrows():
+        # Add candidate city to a temporary graph and calculate centrality scores
+        scores = get_score(city_data, G, airports_df)
+        all_city_scores.append(scores)
+    
+    # Convert results to a DataFrame
+    scores_df = pd.DataFrame(all_city_scores)
+    return scores_df
+
 
 
 
 # Load existing airport network graph and dataset
 G, airports_df = load_airports_and_edges()
 
-# Evaluate each candidate city in the new cities CSV file
+# Clean the airports_df dataset
+airports_df = airports_df.dropna(subset=['LATITUDE', 'LONGITUDE'])
+
+
+# Assuming candidate_csv contains a column 'AIRPORT_ID' for city identifiers
 candidate_csv = "candidate_cities.csv"
-#all_city_scores = get_all_city_scores(candidate_csv, G)
+centrality_results = calculate_centrality_for_candidates(candidate_csv, G, airports_df)
+
+# Save the results to a CSV file or display them
+centrality_results.to_csv("candidate_centrality_scores.csv", index=False)
+print(centrality_results)
+
+
 
 
 # in_degree_avg = sum(nx.in_degree_centrality(G).values()) / len(G)
