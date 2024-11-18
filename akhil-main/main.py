@@ -40,11 +40,13 @@ print('Printing cities record:',cities_df[:1].T, '\n')
 
 airports_df = test_functions.determine_airport_size(airports_df, trips_df)
 
-airports_df = airports_df.loc[airports_df['num_connections'] > 0]
+airports_df = airports_df.loc[airports_df['num_connections'] > 100]
 
 filtered_cities = cities_df[cities_df['population'] >= 100000]
 
-print(test_functions.rank_cities_for_new_airports(cities_df, airports_df, 1000000, 100))
+candidate_cities = test_functions.rank_cities_for_new_airports(cities_df, airports_df, 100000, 50)
+
+print(test_functions.rank_cities_for_new_airports(cities_df, airports_df, 100000, 50))
 
 
 # Extracting edges - we consider a connection from one airport to another as an edge.

@@ -68,10 +68,13 @@ def rank_cities_for_new_airports(cities_df, airports_df, population_threshold, d
                 distance = geodesic(city_location, airport_location).miles
                 if distance < min_distance:
                     min_distance = distance
+
+        print("Min distance: ", min_distance)
         return min_distance
 
-    # Filter cities based on the population threshold
     filtered_cities = cities_df[cities_df['population'] >= population_threshold]
+
+    print(len(filtered_cities))
 
     # Calculate the nearest airport distance for each city
     filtered_cities['nearest_airport_distance'] = filtered_cities.apply(
@@ -86,7 +89,7 @@ def rank_cities_for_new_airports(cities_df, airports_df, population_threshold, d
     ranked_cities = underserved_cities.sort_values(by='rank_score', ascending=False)
 
     # Select relevant columns for the output
-    ranked_cities = ranked_cities[['city', 'state_name', 'population', 'nearest_airport_distance', 'rank_score']]
+    ranked_cities = ranked_cities[['city', 'state_name', 'population',  'lat', 'lng', 'nearest_airport_distance', 'rank_score']]
 
     return ranked_cities.reset_index(drop=True)
 
