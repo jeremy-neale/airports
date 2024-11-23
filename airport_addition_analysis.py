@@ -12,11 +12,10 @@ import networkx as nx
 # import community
 import random
 from shapely.geometry import Point
-
 import pandas as pd
 import networkx as nx
 
-# Example of loading your existing graph data
+# returns the graph and airports DF
 def load_airports_and_edges():
     airports_df = pd.read_csv("dataset/288804893_T_MASTER_CORD.csv")
     trips_df = pd.read_csv("dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv")
@@ -45,6 +44,7 @@ def print_network_stats(G, label="Original Network"):
     print(f"Average betweenness centrality: {betweenness_avg}")
     print()
 
+# gets all nearby airports (2000km)
 def get_best_flights_for_city(city_data, G, airports_df, num_flights=10):
     """
     Determine the best flights to add for a new airport in a candidate city.
@@ -67,16 +67,31 @@ def get_best_flights_for_city(city_data, G, airports_df, num_flights=10):
 
     # Compute centrality and connections
     degree_centrality = nx.degree_centrality(G)
-    airports_within_2000km.loc[:, 'centrality'] = airports_within_2000km['AIRPORT_ID'].map(degree_centrality)
+
+    airports_within_2000km = airports_within_2000km.copy() # added this to supress warning
+
+    airports_within_2000km['centrality'] = airports_within_2000km['AIRPORT_ID'].map(degree_centrality)
 
     # Compute num_connections based on graph degree
     degree_dict = dict(G.degree())  # Total degree (in + out)
-    airports_within_2000km.loc[:, 'num_connections'] = airports_within_2000km['AIRPORT_ID'].map(degree_dict)
+    airports_within_2000km['num_connections'] = airports_within_2000km['AIRPORT_ID'].map(degree_dict)
 
-    # Sort airports by centrality and num_connections
-    airports_within_2000km = airports_within_2000km.sort_values(
-        by=['centrality', 'num_connections'], ascending=False
+
+    # sorts the airports by centrality and number of connections
+    #   this values centrality over a higher number of connections, using .7 and .3 for the weights
+    airports_within_2000km['score'] = (
+    0.7 * airports_within_2000km['centrality'] +
+    0.3 * airports_within_2000km['num_connections']
     )
+    airports_within_2000km = airports_within_2000km.sort_values(by='score', ascending=False)
+
+    # Deletes duplicate airports (multiple runways for 1 airport are initially considered different airports in the data)
+    airports_within_2000km = airports_within_2000km.groupby('AIRPORT_ID').agg({
+        'LATITUDE': 'mean',  # Average coordinates for duplicate entries
+        'LONGITUDE': 'mean',
+        'score': 'max'       # Keep the highest score for the airport
+    }).reset_index()
+
 
     # Select top N airports for connections
     top_airports = airports_within_2000km.head(num_flights)
@@ -85,14 +100,12 @@ def get_best_flights_for_city(city_data, G, airports_df, num_flights=10):
 
 # Function to add the city and print the updated stats
 def add_city_and_print_stats(city_data, G, top_airports):
-    # Print original network stats
-    print_network_stats(G, "Original Network")
     
     # Add the city and flights to the graph
     updated_G = add_city_and_flights(city_data, G, top_airports)
     
     # Print the new proposed flights
-    print(f"New proposed flights for {city_data['DISPLAY_AIRPORT_NAME']}:")
+    print(f"New proposed flights for {city_data['DISPLAY_AIRPORT_NAME']}:\n")
     for flight in top_airports:
         print(flight)
     print()
@@ -136,14 +149,40 @@ candidate_csv = "candidate_cities.csv"
 candidates_df = pd.read_csv(candidate_csv)
 
 # Select the top city (assuming the CSV is already sorted by rank)
-top_city = candidates_df.iloc[0]
 
-# Get the best flights to add for the top city
-top_flights = get_best_flights_for_city(top_city, G, airports_df, num_flights=10)
-print("Top flights to add for the new airport:", top_flights)
+def main():
 
-# Add the city and its proposed flights to the network
-updated_G = add_city_and_print_stats(top_city, G, top_flights)
+    # Load existing flight network and data
+    G, airports_df = load_airports_and_edges()
+
+    # Load the candidate cities CSV
+    candidate_csv = "candidate_cities.csv"
+    candidates_df = pd.read_csv(candidate_csv)
+
+    # Print original network stats
+    print_network_stats(G, "Original Network")
+
+    line = 0
+    while line < len(candidates_df):
+        if len(candidates_df.iloc[line]) > 2: # not empty
+            try:
+                print('\n City ' + str(line + 1) + ': ' + candidates_df.iloc[line]['DISPLAY_AIRPORT_CITY_NAME_FULL'] + ' -----------------------------------------------------------------------\n')
+
+                top_city = candidates_df.iloc[line]
+
+                # Get the best flights to add for the top city
+                top_flights = get_best_flights_for_city(top_city, G, airports_df, num_flights=10)
+                print("Top flights to add for the new airport:", top_flights)
+
+                # Add the city and its proposed flights to the network
+                updated_G = add_city_and_print_stats(top_city, G, top_flights)
+            except:
+                print('Error on line ' + str(line))
+        line += 1
+
+    print("\nAll cities processed.\n")
+
+main()
 
 
 
