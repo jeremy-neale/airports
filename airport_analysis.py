@@ -54,7 +54,7 @@ def plot_percent_change(city_name, original_stats, updated_stats, base_dir):
     labels = list(percent_changes.keys())
     values = list(percent_changes.values())
 
-    x = np.arange(len(labels))  
+    x = np.arange(len(labels))
 
     plt.figure(figsize=(15, 9))
     plt.bar(x, values, color="skyblue", alpha=0.8)
