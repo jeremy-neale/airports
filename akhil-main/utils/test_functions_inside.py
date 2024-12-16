@@ -1,51 +1,26 @@
-# Generate 10 cities you want to add
-
-# Average connections -> airports
-
-# factor in nearest hub airports / distance to other cities to that have other airports
-
-
-import pandas as pd
-import math
-
-
-
 import pandas as pd
 from geopy.distance import geodesic
 
-# Find dictionary about the states and neighboring states
-
-# Draw some visualizations of the data -> 
-
-
-# Add age, income, demographic, etc....
-
-
-"""
-Create a function that determines the size of the airports based on the number of incoming/outgoing carriers it has
-
-Parameters:
-    airports_df
-    trips_df
-
-Returns:
-    pd.Dataframe (airports_df) with added column determining the rank of the airport based on size
-
-"""
-
 def determine_airport_size(airports_df, trips_df):
+    """
+    Create a function that determines the size of the airports based on the number of incoming/outgoing carriers it has
+
+    Parameters:
+        airports_df
+        trips_df
+
+    Returns:
+        pd.Dataframe (airports_df) with added column determining the rank of the airport based on size
+
+    """
 
     airports_df["num_connections"] = 0
-
     for index, airport in airports_df.iterrows():
-
-        num_connections = len(trips_df.loc[trips_df['ORIGIN'] == airport['AIRPORT']]) + len(trips_df.loc[trips_df['DEST'] == airport['AIRPORT']])
-        airports_df.at[index, 'num_connections'] = num_connections        
+        num_origin = len(trips_df.loc[trips_df['ORIGIN'] == airport['AIRPORT']])
+        num_dest = len(trips_df.loc[trips_df['DEST'] == airport['AIRPORT']])
+        airports_df.at[index, 'num_connections'] = num_origin + num_dest        
 
     return airports_df
-
-
-
 
 def rank_cities_for_new_airports(cities_df, airports_df, population_threshold, distance_threshold):
     """
@@ -65,7 +40,8 @@ def rank_cities_for_new_airports(cities_df, airports_df, population_threshold, d
         """
         Find the distance to the nearest airport for a given city location.
         """
-        min_distance = float('inf')  # Start with an infinitely large distance
+        min_distance = float('inf')
+        
         # Loop through each airport and calculate distance
         for _, airport in airports_df.iterrows():
 
