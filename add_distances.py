@@ -3,8 +3,12 @@ import numpy as np
 from math import radians, sin, cos, sqrt, atan2
 
 # Load the CSV files
-airports_df = pd.read_csv("dataset/288804893_T_MASTER_CORD.csv")
-trips_df = pd.read_csv("dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv")
+airports_df = pd.read_csv("dataset/airport_info.csv")
+trips_df = pd.read_csv("dataset/flights.csv")
+
+# Warn if "Distance" has already been added
+if 'DISTANCE' in trips_df.columns:
+    print('Warning: flights.csv already has a "Distance" column')
 
 # Create a dictionary of airport coordinates from airports_df
 airport_coords = {
@@ -43,6 +47,6 @@ for _, row in trips_df.iterrows():
 trips_df['DISTANCE'] = distances
 
 # Save the updated DataFrame to the same CSV file
-trips_df.to_csv("dataset/288798530_T_T100D_MARKET_ALL_CARRIER.csv", index=False)
+trips_df.to_csv("dataset/flights.csv", index=False)
 
 print("Updated CSV file with DISTANCE column.")
