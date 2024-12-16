@@ -23,18 +23,23 @@ def load_airports_and_edges():
 # outputs the network stats
 def print_network_stats(G, label="Network"):
     print(f"\n{label} Stats:")
+
+    # network connectivity
     num_reachable_pairs = sum(1 for node in G for _ in nx.single_source_shortest_path_length(G, node))
     total_possible_pairs = len(G) * (len(G) - 1)
     connectivity = num_reachable_pairs / total_possible_pairs if total_possible_pairs > 0 else 0
     print(f"Connectivity/Reachability: {connectivity:.6%}")
     
+    # betweeness centrality
     betweenness_centrality = nx.betweenness_centrality(G)
     avg_betweenness = sum(betweenness_centrality.values()) / len(betweenness_centrality)
     print(f"Average Betweenness Centrality: {avg_betweenness:.6f}")
 
+    # clusteirng coefficient
     clustering_coefficient = nx.average_clustering(G.to_undirected())
     print(f"Global Clustering Coefficient: {clustering_coefficient:.6f}")
     
+    # return stats
     stats = {
         "Connectivity/Reachability": connectivity,
         "Average Betweenness Centrality": avg_betweenness,
@@ -45,6 +50,7 @@ def print_network_stats(G, label="Network"):
 
 # This outputs a graph for each new airport into output/<time>
 def plot_percent_change(city_name, original_stats, updated_stats, base_dir):
+    # Calculate percent change in stats
     percent_changes = {
         key: ((updated_stats[key] - original_stats[key]) / original_stats[key]) * 100
         for key in original_stats.keys()
@@ -56,6 +62,7 @@ def plot_percent_change(city_name, original_stats, updated_stats, base_dir):
 
     x = np.arange(len(labels))
 
+    # Create graph figure
     plt.figure(figsize=(15, 9))
     plt.bar(x, values, color="skyblue", alpha=0.8)
     plt.ylabel("Percent Change (%)")
@@ -63,6 +70,7 @@ def plot_percent_change(city_name, original_stats, updated_stats, base_dir):
     plt.xticks(x, labels, rotation=45, ha="right")
     plt.axhline(0, color="black", linewidth=0.8, linestyle="--")
 
+    # Add labels
     for i, v in enumerate(values):
         plt.text(
             i, v + (0.1 if v > 0 else -0.1),
@@ -84,11 +92,11 @@ def plot_percent_change(city_name, original_stats, updated_stats, base_dir):
 # Returns the 10 'best' flights from the proposed new airports
 def get_best_flights_for_city(city_data, G, airports_df, num_flights=10):
     candidate_coord = (city_data['LATITUDE'], city_data['LONGITUDE'])
-    candidate_airport = city_data['AIRPORT_ID']
 
     if pd.isna(candidate_coord[0]) or pd.isna(candidate_coord[1]):
         return []
 
+    # focus on airports within 2,000 kilometers
     airports_within_2000km = airports_df[
         airports_df.apply(
             lambda x: geodesic(candidate_coord, (x['LATITUDE'], x['LONGITUDE'])).km <= 2000
